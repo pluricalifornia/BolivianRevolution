@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bolivia Peasant Movement: Chronological Escalation (1932-1953)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #c0392b 0%, #8e44ad 50%, #2980b9 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .header p {
+            margin: 15px 0 0 0;
+            opacity: 0.95;
+            font-size: 1.2em;
+        }
+
+        #escalation-chart {
+            width: 100%;
+            height: 1000px;
+            background: linear-gradient(180deg, #ecf0f1 0%, #bdc3c7 100%);
+            position: relative;
+        }
+
+        .timeline-line {
+            stroke: #34495e;
+            stroke-width: 4px;
+            opacity: 0.8;
+        }
+
+        .year-marker {
+            fill: #2c3e50;
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+        }
+
+        .event-node {
+            cursor: pointer;
+            transition: all 0.4s ease;
+        }
+
+        .event-node:hover {
+            transform: scale(1.1);
+        }
+
+        .event-circle {
+            stroke: #fff;
+            stroke-width: 3px;
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+        }
+
+        .event-text {
+            font-size: 11px;
+            font-weight: 600;
+            text-anchor: start;
+            dominant-baseline: middle;
+            fill: #2c3e50;
+        }
+
+        .escalation-arrow {
+            stroke: #e74c3c;
+            stroke-width: 3px;
+            fill: #e74c3c;
+            opacity: 0.8;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .tension-level {
+            font-size: 12px;
+            fill: #c0392b;
+            font-weight: bold;
+            text-anchor: middle;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(0,0,0,0.95) 0%, rgba(52,73,94,0.95) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 400px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            z-index: 1000;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .legend {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: rgba(255,255,255,0.97);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            font-size: 12px;
+            max-width: 250px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(255,255,255,0.97);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .control-button {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            margin: 3px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        }
+
+        .control-button:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #1f639a 100%);
+            transform: translateY(-2px);
+        }
+
+        .escalation-indicator {
+            position: absolute;
+            right: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(231,76,60,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bolivia Peasant Movement: Chronological Escalation</h1>
+            <p>From Chaco War to Revolutionary Victory (1932-1953)</p>
+        </div>
+        <div style="position: relative;">
+            <svg id="escalation-chart"></svg>
+            <div class="tooltip" id="tooltip"></div>
+            <div class="escalation-indicator">
+                <div>↑ ESCALATION ↑</div>
+                <div style="font-size: 12px; margin-top: 5px;">Tension Level</div>
+            </div>
+            <div class="legend">
+                <h4 style="margin-top: 0; color: #2c3e50;">Event Types</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #1abc9c;"></div>
+                    <span>Identity Formation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #27ae60;"></div>
+                    <span>Organization Success</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3498db;"></div>
+                    <span>Education/Alliance</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Political Action</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Repression/Violence</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span>Revolutionary Change</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="control-button" onclick="resetView()">Reset View</button>
+                <button class="control-button" onclick="playTimeline()">Play Timeline</button>
+                <button class="control-button" onclick="toggleEscalation()">Show Escalation</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chronological data with escalation levels (1-10)
+        const chronologicalData = [
+            {
+                year: 1932,
+                date: "1932-1935",
+                event: "Chaco War",
+                escalation: 2,
+                type: "identity",
+                details: "Mestizo valley peasants build campesino identity through military service. Contact with political activists and urban dwellers. Veterans return as change-makers.",
+                side: "left"
+            },
+            {
+                year: 1936,
+                date: "June 1936",
+                event: "Ana Rancho Union Formation",
+                escalation: 3,
+                type: "organization",
+                details: "Francisco Delgadillo and war veterans form union. Logic: lease land directly as colono group. Meet with teacher, lawyer, Antonio Revuelta. Connect to Eduardo Arze.",
+                side: "right"
+            },
+            {
+                year: 1936,
+                date: "August 1936",
+                event: "Government Recognition",
+                escalation: 4,
+                type: "political",
+                details: "Colonos offer 80,000 vs tenant's 50,000 Bolivianos. President Toro impressed, issues decree recognizing union. Win bid for 40 hectares, 50 families.",
+                side: "left"
+            },
+            {
+                year: 1937,
+                date: "May 1937",
+                event: "Ucureña Central School",
+                escalation: 4,
+                type: "education",
+                details: "School-union alliance formed. Central school + sectional schools model. Director Leónidas Calvimontes. Convent donates 3 hectares. 1/3 built by late 1937.",
+                side: "right"
+            },
+            {
+                year: 1939,
+                date: "1939",
+                event: "Landowner Backlash Begins",
+                escalation: 5,
+                type: "repression",
+                details: "Local tenants accuse school director of embezzlement. Threaten colonos with eviction if children attend school. Police arrest union leaders.",
+                side: "left"
+            },
+            {
+                year: 1940,
+                date: "1940-1941",
+                event: "Terror Campaign",
+                escalation: 6,
+                type: "repression",
+                details: "Two leaders deported to Chimoré penal colony. Union in recess. Police imprisonment and fines. Escalation to level of terror against organizers.",
+                side: "right"
+            },
+            {
+                year: 1941,
+                date: "June 1941",
+                event: "Union Reactivation",
+                escalation: 5,
+                type: "organization",
+                details: "Sindicato de Campesinos de Ucureña formed. School director Juan Guerra helps reactivate union. Closer relationship between union and school.",
+                side: "left"
+            },
+            {
+                year: 1942,
+                date: "1942",
+                event: "Strategic Reorganization",
+                escalation: 5,
+                type: "education",
+                details: "Reorganized as Cliza Farmers and Educators Union for protection. Led by school director, teachers, peasant leaders. Ucureña seen as agitation center.",
+                side: "right"
+            },
+            {
+                year: 1943,
+                date: "1943",
+                event: "Land Purchase Victory",
+                escalation: 4,
+                type: "organization",
+                details: "216 colonos become landowners (51 Ana Rancho, 165 La Loma). Now independent piqueros with no obligations to hacendado class.",
+                side: "left"
+            },
+            {
+                year: 1946,
+                date: "1946",
+                event: "José Rojas Leadership",
+                escalation: 6,
+                type: "political",
+                details: "Rojas elected union head. School center: 41 sectional schools, 62 teachers, 2,100 students. Most important in Valle Alto. PIR political campaign support.",
+                side: "right"
+            },
+            {
+                year: 1947,
+                date: "1947",
+                event: "Political Campaign Failure",
+                escalation: 7,
+                type: "repression",
+                details: "PIR platform for Santa Clara expropriation fails congressional approval. Moderate reform path blocked by entrenched interests.",
+                side: "left"
+            },
+            {
+                year: 1949,
+                date: "1949",
+                event: "Banner Incident",
+                escalation: 8,
+                type: "repression",
+                details: "Vice-President Urriolagoitia coldly received. Donated banner found hanging upside-down. José Rojas accused, flees to Argentina to avoid reprisal.",
+                side: "right"
+            },
+            {
+                year: 1952,
+                date: "April 9, 1952",
+                event: "MNR Revolution Victory",
+                escalation: 10,
+                type: "revolutionary",
+                details: "Army and conservative defenders defeated. Power of landholding elite ends. Peasant syndicates take over local government. Haciendas invaded.",
+                side: "left"
+            },
+            {
+                year: 1953,
+                date: "August 2, 1953",
+                event: "Agrarian Reform Launch",
+                escalation: 10,
+                type: "revolutionary",
+                details: "Official agrarian reform launched in Ucureña ceremony. Colono system abolished. José Rojas becomes Minister of Peasant Affairs twice.",
+                side: "right"
+            }
+        ];
+
+        // Color scheme
+        const colors = {
+            identity: "#1abc9c",
+            organization: "#27ae60",
+            education: "#3498db",
+            political: "#f39c12",
+            repression: "#e74c3c",
+            revolutionary: "#9b59b6"
+        };
+
+        // Setup SVG
+        const svg = d3.select("#escalation-chart");
+        const width = 1600;
+        const height = 1000;
+        const margin = { top: 80, right: 120, bottom: 80, left: 120 };
+        
+        svg.attr("width", width).attr("height", height);
+
+        const g = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
+        
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+
+        // Scales
+        const xScale = d3.scaleLinear()
+            .domain([1932, 1953])
+            .range([0, chartWidth]);
+
+        const yScale = d3.scaleLinear()
+            .domain([1, 10])
+            .range([chartHeight, 0]);
+
+        // Create main timeline line
+        const timelineLine = d3.line()
+            .x(d => xScale(d.year))
+            .y(d => yScale(d.escalation))
+            .curve(d3.curveMonotoneX);
+
+        // Add background escalation zones
+        const escalationZones = [
+            { level: "Low Tension", range: [1, 3], color: "#d5f4e6" },
+            { level: "Rising Tension", range: [3, 6], color: "#ffeaa7" },
+            { level: "High Tension", range: [6, 8], color: "#fab1a0" },
+            { level: "Revolutionary", range: [8, 10], color: "#fd79a8" }
+        ];
+
+        escalationZones.forEach(zone => {
+            g.append("rect")
+                .attr("x", 0)
+                .attr("y", yScale(zone.range[1]))
+                .attr("width", chartWidth)
+                .attr("height", yScale(zone.range[0]) - yScale(zone.range[1]))
+                .attr("fill", zone.color)
+                .attr("opacity", 0.3);
+
+            g.append("text")
+                .attr("x", chartWidth - 10)
+                .attr("y", (yScale(zone.range[0]) + yScale(zone.range[1])) / 2)
+                .attr("text-anchor", "end")
+                .attr("class", "tension-level")
+                .text(zone.level);
+        });
+
+        // Add main escalation line
+        g.append("path")
+            .datum(chronologicalData)
+            .attr("class", "timeline-line")
+            .attr("d", timelineLine)
+            .attr("fill", "none");
+
+        // Add escalation arrows
+        for (let i = 0; i < chronologicalData.length - 1; i++) {
+            const current = chronologicalData[i];
+            const next = chronologicalData[i + 1];
+            
+            if (next.escalation > current.escalation) {
+                const x1 = xScale(current.year);
+                const y1 = yScale(current.escalation);
+                const x2 = xScale(next.year);
+                const y2 = yScale(next.escalation);
+                
+                // Arrow line
+                g.append("line")
+                    .attr("class", "escalation-arrow")
+                    .attr("x1", x1)
+                    .attr("y1", y1)
+                    .attr("x2", x2)
+                    .attr("y2", y2);
+                
+                // Arrow head
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const arrowSize = 8;
+                
+                g.append("polygon")
+                    .attr("class", "escalation-arrow")
+                    .attr("points", `0,0 ${-arrowSize},${-arrowSize/2} ${-arrowSize},${arrowSize/2}`)
+                    .attr("transform", `translate(${x2}, ${y2}) rotate(${angle * 180 / Math.PI})`);
+            }
+        }
+
+        // Add year markers on x-axis
+        const years = [...new Set(chronologicalData.map(d => d.year))];
+        years.forEach(year => {
+            g.append("text")
+                .attr("class", "year-marker")
+                .attr("x", xScale(year))
+                .attr("y", chartHeight + 30)
+                .text(year);
+        });
+
+        // Add event nodes
+        const eventNodes = g.selectAll(".event-node")
+            .data(chronologicalData)
+            .enter().append("g")
+            .attr("class", "event-node")
+            .attr("transform", d => `translate(${xScale(d.year)}, ${yScale(d.escalation)})`);
+
+        // Add circles for events
+        eventNodes.append("circle")
+            .attr("class", "event-circle")
+            .attr("r", d => 8 + d.escalation)
+            .style("fill", d => colors[d.type]);
+
+        // Add event labels with custom positioning
+        eventNodes.append("text")
+            .attr("class", "event-text")
+            .attr("x", d => {
+                if (d.event === "Ucureña Central School") return 60;
+                if (d.event === "Landowner Backlash Begins") return -60;
+                if (d.event === "Government Recognition") return -40;
+                if (d.event === "Union Reactivation") return 20;
+                return d.side === "left" ? -20 : 20;
+            })
+            .attr("y", d => {
+                if (d.event === "Union Reactivation") return 20;
+                if (d.event === "Ucureña Central School") return 5;
+                return d.side === "left" ? -15 : -15;
+            })
+            .attr("text-anchor", d => {
+                if (d.event === "Ucureña Central School") return "start";
+                if (d.event === "Landowner Backlash Begins") return "end";
+                if (d.event === "Government Recognition") return "end";
+                if (d.event === "Union Reactivation") return "start";
+                return d.side === "left" ? "end" : "start";
+            })
+            .text(d => d.event)
+            .call(wrap, 150);
+
+        // Add date labels with custom positioning
+        eventNodes.append("text")
+            .attr("class", "event-text")
+            .attr("x", d => {
+                if (d.event === "Ucureña Central School") return 60;
+                if (d.event === "Landowner Backlash Begins") return -60;
+                if (d.event === "Government Recognition") return -40;
+                if (d.event === "Union Reactivation") return 20;
+                return d.side === "left" ? -20 : 20;
+            })
+            .attr("y", d => {
+                if (d.event === "Union Reactivation") return 40;
+                if (d.event === "Ucureña Central School") return 25;
+                return d.side === "left" ? 25 : 25;
+            })
+            .attr("text-anchor", d => {
+                if (d.event === "Ucureña Central School") return "start";
+                if (d.event === "Landowner Backlash Begins") return "end";
+                if (d.event === "Government Recognition") return "end";
+                if (d.event === "Union Reactivation") return "start";
+                return d.side === "left" ? "end" : "start";
+            })
+            .style("font-size", "10px")
+            .style("font-style", "italic")
+            .style("fill", "#7f8c8d")
+            .text(d => d.date);
+
+        // Tooltip functionality with improved positioning and stability
+        const tooltip = d3.select("#tooltip");
+
+        eventNodes.on("mouseover", function(event, d) {
+            const tooltipWidth = 400;
+            const tooltipHeight = 200;
+            const pageX = event.pageX;
+            const pageY = event.pageY;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            // Calculate optimal position to prevent going off-screen
+            let left = pageX + 20;
+            let top = pageY - 20;
+            
+            // Adjust if tooltip would go off right edge
+            if (left + tooltipWidth > windowWidth) {
+                left = pageX - tooltipWidth - 20;
+            }
+            
+            // Adjust if tooltip would go off bottom edge
+            if (top + tooltipHeight > windowHeight) {
+                top = pageY - tooltipHeight - 20;
+            }
+            
+            // Ensure minimum distance from edges
+            left = Math.max(10, Math.min(left, windowWidth - tooltipWidth - 10));
+            top = Math.max(10, Math.min(top, windowHeight - tooltipHeight - 10));
+            
+            tooltip.html(`
+                <strong>${d.event}</strong><br>
+                <em>${d.date}</em><br>
+                <strong>Escalation Level: ${d.escalation}/10</strong><br><br>
+                ${d.details}
+            `)
+                .style("left", left + "px")
+                .style("top", top + "px")
+                .style("opacity", 1);
+        })
+        .on("mouseout", function() {
+            tooltip.style("opacity", 0);
+        })
+        .on("mousemove", function(event, d) {
+            // Update position on mouse move to prevent glitching
+            const tooltipWidth = 400;
+            const tooltipHeight = 200;
+            const pageX = event.pageX;
+            const pageY = event.pageY;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            let left = pageX + 20;
+            let top = pageY - 20;
+            
+            if (left + tooltipWidth > windowWidth) {
+                left = pageX - tooltipWidth - 20;
+            }
+            
+            if (top + tooltipHeight > windowHeight) {
+                top = pageY - tooltipHeight - 20;
+            }
+            
+            left = Math.max(10, Math.min(left, windowWidth - tooltipWidth - 10));
+            top = Math.max(10, Math.min(top, windowHeight - tooltipHeight - 10));
+            
+            tooltip.style("left", left + "px")
+                   .style("top", top + "px");
+        });
+
+        // Text wrapping function
+        function wrap(text, width) {
+            text.each(function() {
+                var text = d3.select(this),
+                    words = text.text().split(/\s+/).reverse(),
+                    word,
+                    line = [],
+                    lineNumber = 0,
+                    lineHeight = 1.1,
+                    y = text.attr("y"),
+                    x = text.attr("x"),
+                    dy = 0,
+                    tspan = text.text(null).append("tspan").attr("x", x).attr("y", y).attr("dy", dy + "em");
+                
+                while (word = words.pop()) {
+                    line.push(word);
+                    tspan.text(line.join(" "));
+                    if (tspan.node().getComputedTextLength() > width) {
+                        line.pop();
+                        tspan.text(line.join(" "));
+                        line = [word];
+                        tspan = text.append("tspan").attr("x", x).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                    }
+                }
+            });
+        }
+
+        // Control functions
+        let animationRunning = false;
+
+        function resetView() {
+            // Reset any animations or highlights
+            eventNodes.selectAll("circle")
+                .transition()
+                .duration(500)
+                .attr("r", d => 8 + d.escalation)
+                .style("opacity", 1);
+        }
+
+        function playTimeline() {
+            if (animationRunning) return;
+            animationRunning = true;
+
+            // Hide all events first
+            eventNodes.style("opacity", 0);
+
+            // Animate events in sequence
+            chronologicalData.forEach((d, i) => {
+                setTimeout(() => {
+                    eventNodes.filter((node, index) => index === i)
+                        .transition()
+                        .duration(800)
+                        .style("opacity", 1)
+                        .select("circle")
+                        .attr("r", 0)
+                        .transition()
+                        .duration(400)
+                        .attr("r", d => 8 + d.escalation);
+                    
+                    if (i === chronologicalData.length - 1) {
+                        animationRunning = false;
+                    }
+                }, i * 1000);
+            });
+        }
+
+        function toggleEscalation() {
+            // Highlight escalation points
+            eventNodes.selectAll("circle")
+                .transition()
+                .duration(1000)
+                .attr("r", d => d.escalation > 6 ? 25 : 8 + d.escalation)
+                .style("opacity", d => d.escalation > 6 ? 1 : 0.6);
+        }
+
+        // Add Y-axis label
+        g.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -50)
+            .attr("x", -chartHeight / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("fill", "#2c3e50")
+            .text("Escalation Level (1-10)");
+
+        // Add X-axis label
+        g.append("text")
+            .attr("x", chartWidth / 2)
+            .attr("y", chartHeight + 60)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("fill", "#2c3e50")
+            .text("Timeline (1932-1953)");
+    </script>
+</body>
+</html>
